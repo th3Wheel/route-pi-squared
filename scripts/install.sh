@@ -4,7 +4,7 @@
 
 set -e
 
-# Determine script directory and repository root
+# Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -44,33 +44,27 @@ apt install -y keepalived dnsutils curl
 
 # Copy health check script
 echo -e "${YELLOW}[2/4] Installing health check script...${NC}"
-if [ ! -f "${SCRIPT_DIR}/check_pihole.sh" ]; then
-    echo -e "${RED}Error: check_pihole.sh not found in ${SCRIPT_DIR}${NC}"
-    echo "Make sure you're running the script from the repository."
+CHECK_PIHOLE_SCRIPT="${SCRIPT_DIR}/check_pihole.sh"
+if [ ! -f "$CHECK_PIHOLE_SCRIPT" ]; then
+    echo -e "${RED}Error: Health check script not found at ${CHECK_PIHOLE_SCRIPT}${NC}"
     exit 1
 fi
-cp "${SCRIPT_DIR}/check_pihole.sh" /usr/local/bin/
+cp "$CHECK_PIHOLE_SCRIPT" /usr/local/bin/
 chmod +x /usr/local/bin/check_pihole.sh
 
 # Copy configuration
 echo -e "${YELLOW}[3/4] Installing keepalived configuration...${NC}"
 if [ "$NODE_TYPE" == "master" ]; then
-    CONFIG_FILE="${REPO_ROOT}/examples/keepalived-master.conf"
-    if [ ! -f "${CONFIG_FILE}" ]; then
-        echo -e "${RED}Error: keepalived-master.conf not found in ${REPO_ROOT}/examples/${NC}"
-        echo "Make sure you're running the script from the repository."
-        exit 1
-    fi
-    cp "${CONFIG_FILE}" /etc/keepalived/keepalived.conf
+    KEEPALIVED_CONF="${REPO_ROOT}/examples/keepalived-master.conf"
 else
-    CONFIG_FILE="${REPO_ROOT}/examples/keepalived-backup.conf"
-    if [ ! -f "${CONFIG_FILE}" ]; then
-        echo -e "${RED}Error: keepalived-backup.conf not found in ${REPO_ROOT}/examples/${NC}"
-        echo "Make sure you're running the script from the repository."
-        exit 1
-    fi
-    cp "${CONFIG_FILE}" /etc/keepalived/keepalived.conf
+    KEEPALIVED_CONF="${REPO_ROOT}/examples/keepalived-backup.conf"
 fi
+
+if [ ! -f "$KEEPALIVED_CONF" ]; then
+    echo -e "${RED}Error: Keepalived configuration not found at ${KEEPALIVED_CONF}${NC}"
+    exit 1
+fi
+cp "$KEEPALIVED_CONF" /etc/keepalived/keepalived.conf
 
 echo -e "${YELLOW}[4/4] Enabling keepalived service...${NC}"
 systemctl enable keepalived
