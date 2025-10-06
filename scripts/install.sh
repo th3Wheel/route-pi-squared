@@ -4,6 +4,10 @@
 
 set -e
 
+# Determine script directory and repository root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -40,15 +44,32 @@ apt install -y keepalived dnsutils curl
 
 # Copy health check script
 echo -e "${YELLOW}[2/4] Installing health check script...${NC}"
-cp scripts/check_pihole.sh /usr/local/bin/
+if [ ! -f "${SCRIPT_DIR}/check_pihole.sh" ]; then
+    echo -e "${RED}Error: check_pihole.sh not found in ${SCRIPT_DIR}${NC}"
+    echo "Make sure you're running the script from the repository."
+    exit 1
+fi
+cp "${SCRIPT_DIR}/check_pihole.sh" /usr/local/bin/
 chmod +x /usr/local/bin/check_pihole.sh
 
 # Copy configuration
 echo -e "${YELLOW}[3/4] Installing keepalived configuration...${NC}"
 if [ "$NODE_TYPE" == "master" ]; then
-    cp examples/keepalived-master.conf /etc/keepalived/keepalived.conf
+    CONFIG_FILE="${REPO_ROOT}/examples/keepalived-master.conf"
+    if [ ! -f "${CONFIG_FILE}" ]; then
+        echo -e "${RED}Error: keepalived-master.conf not found in ${REPO_ROOT}/examples/${NC}"
+        echo "Make sure you're running the script from the repository."
+        exit 1
+    fi
+    cp "${CONFIG_FILE}" /etc/keepalived/keepalived.conf
 else
-    cp examples/keepalived-backup.conf /etc/keepalived/keepalived.conf
+    CONFIG_FILE="${REPO_ROOT}/examples/keepalived-backup.conf"
+    if [ ! -f "${CONFIG_FILE}" ]; then
+        echo -e "${RED}Error: keepalived-backup.conf not found in ${REPO_ROOT}/examples/${NC}"
+        echo "Make sure you're running the script from the repository."
+        exit 1
+    fi
+    cp "${CONFIG_FILE}" /etc/keepalived/keepalived.conf
 fi
 
 echo -e "${YELLOW}[4/4] Enabling keepalived service...${NC}"
