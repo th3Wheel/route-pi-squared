@@ -9,11 +9,8 @@ dig @127.0.0.1 pi.hole +short >/dev/null 2>&1
 DNS_OK=$?
 
 # 2) FTL process check (recommended)
-if pgrep pihole-FTL >/dev/null 2>&1; then
-	FTL_OK=0
-else
-	FTL_OK=1
-fi
+pgrep pihole-FTL >/dev/null 2>&1
+FTL_OK=$?
 
 # 3) Web UI check (local HTTP request)
 curl -sS --connect-timeout 2 http://127.0.0.1/admin/ > /dev/null 2>&1
