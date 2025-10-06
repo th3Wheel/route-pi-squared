@@ -12,9 +12,9 @@ sudo cp keepalived-master.conf /etc/keepalived/keepalived.conf
 ```
 
 **Important:** Edit the following values before use:
-- `interface eth0` - Change to your network interface name
-- `auth_pass piholeHApass` - Change to a secure password
-- `10.20.20.10/24` - Change to your desired Virtual IP address
+- `interface eth0` - Change to **YOUR_NETWORK_INTERFACE** (e.g., eth0, ens18)
+- `auth_pass YOUR_SECRET_PASSWORD_HERE` - Change to **YOUR_SECURE_PASSWORD**
+- `10.20.20.10/24` - Change to **YOUR_VIRTUAL_IP** (e.g., 192.168.1.10/24)
 
 ## keepalived-backup.conf
 
@@ -26,9 +26,9 @@ sudo cp keepalived-backup.conf /etc/keepalived/keepalived.conf
 ```
 
 **Important:** Edit the following values before use:
-- `interface eth0` - Change to your network interface name
-- `auth_pass piholeHApass` - **Must match the master's password**
-- `10.20.20.10/24` - **Must match the master's VIP**
+- `interface eth0` - Change to **YOUR_NETWORK_INTERFACE** (must match master if using same interface)
+- `auth_pass YOUR_SECRET_PASSWORD_HERE` - **Must match YOUR_SECURE_PASSWORD from master**
+- `10.20.20.10/24` - **Must match YOUR_VIRTUAL_IP from master**
 
 ## Configuration Notes
 
