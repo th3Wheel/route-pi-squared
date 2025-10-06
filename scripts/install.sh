@@ -4,6 +4,10 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -40,16 +44,27 @@ apt install -y keepalived dnsutils curl
 
 # Copy health check script
 echo -e "${YELLOW}[2/4] Installing health check script...${NC}"
-cp scripts/check_pihole.sh /usr/local/bin/
+CHECK_PIHOLE_SCRIPT="${SCRIPT_DIR}/check_pihole.sh"
+if [ ! -f "$CHECK_PIHOLE_SCRIPT" ]; then
+    echo -e "${RED}Error: Health check script not found at ${CHECK_PIHOLE_SCRIPT}${NC}"
+    exit 1
+fi
+cp "$CHECK_PIHOLE_SCRIPT" /usr/local/bin/
 chmod +x /usr/local/bin/check_pihole.sh
 
 # Copy configuration
 echo -e "${YELLOW}[3/4] Installing keepalived configuration...${NC}"
 if [ "$NODE_TYPE" == "master" ]; then
-    cp examples/keepalived-master.conf /etc/keepalived/keepalived.conf
+    KEEPALIVED_CONF="${REPO_ROOT}/examples/keepalived-master.conf"
 else
-    cp examples/keepalived-backup.conf /etc/keepalived/keepalived.conf
+    KEEPALIVED_CONF="${REPO_ROOT}/examples/keepalived-backup.conf"
 fi
+
+if [ ! -f "$KEEPALIVED_CONF" ]; then
+    echo -e "${RED}Error: Keepalived configuration not found at ${KEEPALIVED_CONF}${NC}"
+    exit 1
+fi
+cp "$KEEPALIVED_CONF" /etc/keepalived/keepalived.conf
 
 echo -e "${YELLOW}[4/4] Enabling keepalived service...${NC}"
 systemctl enable keepalived
