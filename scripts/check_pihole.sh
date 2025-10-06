@@ -16,11 +16,8 @@ else
 fi
 
 # 3) Web UI check (local HTTP request)
-if curl -sS --connect-timeout 2 http://127.0.0.1/admin/ > /dev/null 2>&1; then
-	UI_OK=0
-else
-	UI_OK=1
-fi
+curl -sS --connect-timeout 2 http://127.0.0.1/admin/ > /dev/null 2>&1
+UI_OK=$?
 
 # Combine checks - require DNS and at least one of FTL or UI
 if [ $DNS_OK -eq 0 ] && { [ $FTL_OK -eq 0 ] || [ $UI_OK -eq 0 ]; }; then
