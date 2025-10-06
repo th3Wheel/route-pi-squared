@@ -96,6 +96,9 @@ sudo systemctl stop keepalived  # on master
   - Health check scripts
   - Testing procedures
   - Troubleshooting
+- **[Quick Reference Guide](QUICKREF.md)** - Common commands and operations at a glance
+- **[Contributing Guidelines](CONTRIBUTING.md)** - How to contribute to the project
+- **[Changelog](CHANGELOG.md)** - Project version history
 
 ## ⚙️ Configuration
 
