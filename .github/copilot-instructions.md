@@ -44,10 +44,10 @@ route-pi-squared/
   - `0` = success
   - Non-zero = failure (with appropriate error code)
 - **Color codes for output** (when applicable):
-  - `RED='\\033[0;31m'` for errors
-  - `GREEN='\\033[0;32m'` for success
-  - `YELLOW='\\033[1;33m'` for warnings
-  - `NC='\\033[0m'` to reset
+  - `RED='\033[0;31m'` for errors
+  - `GREEN='\033[0;32m'` for success
+  - `YELLOW='\033[1;33m'` for warnings
+  - `NC='\033[0m'` to reset
 
 ### Configuration Files
 
