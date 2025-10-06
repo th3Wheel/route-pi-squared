@@ -2,6 +2,33 @@
 
 This directory contains helper scripts for the Route: π² project.
 
+## install.sh
+
+Automated installation script for deploying Route: π² on a node.
+
+**Usage:**
+```bash
+# For master node
+sudo ./install.sh master
+
+# For backup node
+sudo ./install.sh backup
+```
+
+**What it does:**
+1. Installs keepalived and required dependencies
+2. Copies health check script to `/usr/local/bin/`
+3. Deploys appropriate keepalived configuration
+4. Enables keepalived service
+
+**After installation:**
+You must edit `/etc/keepalived/keepalived.conf` to customize:
+- Network interface name
+- Virtual IP address
+- Authentication password
+
+---
+
 ## check_pihole.sh
 
 Health check script for Keepalived VRRP.
