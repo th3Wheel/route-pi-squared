@@ -21,6 +21,8 @@
 #   * Downloads the Debian 12 standard template if missing.
 #   * Applies nesting, keyctl, and cap_net_admin capabilities.
 #   * Converts the container into a template after applying updates.
+#   * By default, the container is not started automatically during creation.
+#     Use --autostart to start it immediately after creation.
 
 set -euo pipefail
 
@@ -37,6 +39,7 @@ MEMORY_MB="1024"
 SWAP_MB="0"
 CTID=""
 REFRESH=0
+AUTOSTART=0
 
 usage() {
   cat <<'USAGE'
@@ -55,6 +58,7 @@ Options:
   --memory <mb>          RAM in MiB (default: 1024).
   --swap <mb>            Swap in MiB (default: 0).
   --refresh              Force refresh of the Debian template via pveam.
+  --autostart            Start the container automatically after creation.
   -h, --help             Show this help message and exit.
 USAGE
 }
@@ -125,6 +129,10 @@ while [[ $# -gt 0 ]]; do
       REFRESH=1
       shift
       ;;
+    --autostart)
+      AUTOSTART=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -168,8 +176,12 @@ pct create "$CTID" "${TEMPLATE_STORAGE}:vztmpl/${TEMPLATE_IMAGE}" \
   --swap "$SWAP_MB" \
   --net0 "name=eth0,bridge=${BRIDGE},firewall=1,gw=${GATEWAY},ip=${IPV4_ADDRESS},tag=${VLAN_TAG}" \
   --ostype debian \
-  --unprivileged 0 \
-  --start 1
+  --unprivileged 0
+
+if [[ $AUTOSTART -eq 1 ]]; then
+  echo "[INFO] Starting container ${CTID} as requested..."
+  pct start "$CTID"
+fi
 
 echo "[INFO] Applying container feature flags..."
 pct set "$CTID" -features nesting=1,keyctl=1

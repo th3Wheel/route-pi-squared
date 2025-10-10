@@ -77,6 +77,9 @@ Optional:
   --no-keepalived         Skip Keepalived integration.
   --no-keepalived-reload  Do not reload Keepalived after writing configuration.
   -h, --help              Show this help message and exit.
+
+Output:
+  At the end of a successful deployment, the script will display the container's hostname, IPv4 address, and Pi-hole admin password for your reference.
 USAGE
 }
 
@@ -214,7 +217,7 @@ done
 [[ -n "$TEMPLATE_CTID" ]] || { usage; die "--template-ctid is required"; }
 [[ -n "$TARGET_CTID" ]] || { usage; die "--ctid is required"; }
 
-[[ $EUID -eq 0 ]] || die "Please run as root on the Proxmox host." 
+[[ $EUID -eq 0 ]] || die "Please run as root on the Proxmox host."
 
 require_command pct
 
@@ -252,7 +255,7 @@ done
 
 if [[ -z "$PIHOLE_PASSWORD" ]]; then
   PIHOLE_PASSWORD="$(random_password)"
-  echo "[INFO] Generated Pi-hole admin password: ${PIHOLE_PASSWORD}" 
+  echo "[INFO] Generated Pi-hole admin password: ${PIHOLE_PASSWORD}"
   echo "[INFO] Store this password securely; it will not be shown again."
 fi
 
@@ -288,7 +291,10 @@ pct exec "$TARGET_CTID" -- bash -c "apt-get update && apt-get install -y curl gn
 pct exec "$TARGET_CTID" -- bash -c "curl -sSL https://install.pi-hole.net -o /tmp/pihole-install.sh"
 pct exec "$TARGET_CTID" -- bash -c "chmod +x /tmp/pihole-install.sh"
 pct exec "$TARGET_CTID" -- bash -c "PIHOLE_SKIP_OS_CHECK=true PIHOLE_INSTALL_FLAGS='--unattended' /tmp/pihole-install.sh"
-pct exec "$TARGET_CTID" -- bash -c "pihole -a -p '${PIHOLE_PASSWORD}'"
+pct exec "$TARGET_CTID" -- bash -c "pihole -a -p <<EOF
+pct exec "$TARGET_CTID" -- bash -c "trap 'rm -f /tmp/pihole_pw' EXIT; pihole -a -p < /tmp/pihole_pw"
+${PIHOLE_PASSWORD}
+EOF"
 pct exec "$TARGET_CTID" -- bash -c "rm -f /tmp/pihole-install.sh"
 
 echo "[INFO] Enabling Pi-hole services at boot..."

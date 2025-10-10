@@ -31,8 +31,14 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
 
 1. Download the latest Debian-based Radxa image (or Armbian if officially recommended) for the Cubie A5E.
 2. Verify the sha256 checksum published alongside the image.
+
+   ```bash
+   sha256sum -c radxa-cubie-debian.img.sha256
+   ```
+
 3. Flash the image to the target boot media.
-   ```powershell
+
+   ```bash
    # Replace X with the removable media identifier on the workstation
    sudo dd if=radxa-cubie-debian.img of=/dev/sdX bs=8M status=progress conv=fsync
    ```
@@ -43,15 +49,20 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
 
 1. Log in via SSH using the management IP.
 2. Update package indexes and upgrade the base image.
+
    ```bash
    sudo apt-get update
    sudo apt-get -y dist-upgrade
    ```
+
 3. Install Radxa firmware and kernel meta-packages if not already included:
+
    ```bash
    sudo apt-get install -y linux-image-current-radxa-aarch64 linux-headers-current-radxa-aarch64 radxa-firmware
    ```
+
 4. Reboot and confirm the new kernel version:
+
    ```bash
    uname -a
    ```
@@ -60,6 +71,7 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
 
 1. Identify the primary Ethernet interface (typically `end0`).
 2. Create a systemd-networkd configuration to extend VLAN 20:
+
    ```bash
    sudo tee /etc/systemd/network/20-end0.network > /dev/null <<'EOF'
    [Match]
@@ -90,11 +102,13 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
    EOF
    ```
 3. Enable and restart systemd-networkd:
+
    ```bash
    sudo systemctl enable systemd-networkd.service
    sudo systemctl restart systemd-networkd.service
    ```
 4. Validate connectivity to the Route Pi² router and the Proxmox Pi-hole node:
+
    ```bash
    ping -c 4 10.10.20.1
    ping -c 4 10.10.20.10
@@ -103,16 +117,20 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
 ## Step 4: Harden the Base System
 
 1. Create a dedicated automation user for repository interactions:
+
    ```bash
    sudo adduser --disabled-password --gecos "RoutePi Automation" routepi
    sudo usermod -aG sudo,docker routepi
    ```
 2. Enforce unattended security updates:
+
    ```bash
    sudo apt-get install -y unattended-upgrades apt-listchanges
    sudo dpkg-reconfigure -plow unattended-upgrades
    ```
+
 3. Configure basic firewall defaults (optional but recommended):
+
    ```bash
    sudo apt-get install -y nftables
    sudo tee /etc/nftables.conf > /dev/null <<'EOF'
@@ -140,6 +158,7 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
 ## Step 5: Install Docker Engine
 
 1. Install Docker repository prerequisites and the engine:
+
    ```bash
    sudo apt-get install -y ca-certificates curl gnupg lsb-release
    curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -148,12 +167,16 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
    sudo apt-get update
    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
    ```
+
 2. Enable and start Docker:
+
    ```bash
    sudo systemctl enable --now docker.service
    sudo systemctl enable --now containerd.service
    ```
+
 3. Add the automation account to the Docker group:
+
    ```bash
    sudo usermod -aG docker routepi
    ```
@@ -161,18 +184,24 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
 ## Step 6: Prepare Pi-hole Deployment Artefacts
 
 1. Create persistent storage directories for the Docker stack:
+
    ```bash
    sudo mkdir -p /srv/pihole-docker/etc-pihole
    sudo mkdir -p /srv/pihole-docker/etc-dnsmasq.d
    sudo chown -R routepi:routepi /srv/pihole-docker
    ```
+
 2. Clone or update the Route Pi² repository under `/opt/route-pi-squared`:
+
    ```bash
    sudo mkdir -p /opt/route-pi-squared
    sudo chown routepi:routepi /opt/route-pi-squared
-   sudo -u routepi git clone https://git.example.com/route-pi-squared.git /opt/route-pi-squared
+   # Replace <REPO_URL> with your actual Route Pi² Git repository URL
+   sudo -u routepi git clone <REPO_URL> /opt/route-pi-squared
    ```
+
 3. Symlink the compose manifest once authored:
+
    ```bash
    sudo ln -s /opt/route-pi-squared/projects/route-pi-squared/examples/docker/docker-compose.pihole.yaml \
      /srv/pihole-docker/docker-compose.yaml
@@ -181,14 +210,18 @@ This guide defines the deterministic steps for preparing the Radxa Cubie A5E pla
 ## Step 7: Validate the Environment
 
 1. Confirm Docker info and VLAN presence:
+
    ```bash
    docker info --format '{{.Name}}: {{.OperatingSystem}}'
    ip -d link show end0.20
    ```
+
 2. Dry-run the Docker Compose stack once the manifest is available:
+
    ```bash
    docker compose --file /srv/pihole-docker/docker-compose.yaml config
    ```
+
 3. Record the system state in Route Pi² documentation and update `projects/route-pi-squared/docs/hardware-inventory.md` with the Cubie A5E serial and interface mapping.
 
 ---
