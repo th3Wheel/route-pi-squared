@@ -1,0 +1,133 @@
+version: '3.8'
+
+# Docker Compose manifest for Pi-hole + Unbound stack on Radxa Zero 3E
+# Deploys DNS ad-blocking with recursive resolver on VLAN 20
+# Static IP: 10.10.20.11 (Pi-hole), 10.10.20.12 (Unbound)
+# Gateway: 10.10.20.1
+
+services:
+  # Pi-hole DNS ad-blocker service
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole-docker
+    hostname: pihole-docker
+
+    # Environment configuration
+    environment:
+      TZ: 'UTC'  # Set appropriate timezone for your location
+      WEBPASSWORD: 'changeme123'  # CHANGE THIS PASSWORD before deployment
+      PIHOLE_DNS_: '10.10.20.12#53'  # Unbound upstream resolver
+      DNSSEC: 'true'  # Enable DNSSEC validation
+      DNS_FQDN_REQUIRED: 'true'  # Require fully qualified domain names
+      DNS_BOGUS_PRIV: 'true'  # Filter RFC1918 reverse lookups
+      REV_SERVER: 'true'  # Enable reverse DNS for local network
+      REV_SERVER_DOMAIN: 'lan'  # Local domain name
+      REV_SERVER_TARGET: '10.10.20.1'  # Router IP for reverse lookups
+      REV_SERVER_CIDR: '10.10.0.0/18'  # LAN subnet for reverse DNS
+      DHCP_ACTIVE: 'false'  # Disable DHCP (handled by router)
+      PIHOLE_UID: '0'  # Run as root for bind mounts
+      PIHOLE_GID: '0'  # Run as root for bind mounts
+
+    # Volume mounts for data persistence
+    volumes:
+      - /srv/pihole-docker/pihole/etc-pihole:/etc/pihole:rw
+      - /srv/pihole-docker/pihole/etc-dnsmasq.d:/etc/dnsmasq.d:rw
+      - /srv/pihole-docker/pihole/var-log:/var/log:rw
+
+    # Network configuration for VLAN 20
+    networks:
+      vlan20:
+        ipv4_address: 10.10.20.11
+
+    # Port mappings (DNS and web UI)
+    ports:
+      - "53:53/tcp"    # DNS TCP
+      - "53:53/udp"    # DNS UDP
+      - "80:80/tcp"    # Web UI (consider changing to 8080 for security)
+
+    # Health check for service monitoring
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "pi-hole.net"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits for Radxa Zero 3E
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # Unbound recursive DNS resolver
+  unbound:
+    image: mvance/unbound:latest
+    container_name: unbound-docker
+    hostname: unbound-docker
+
+    # Volume mount for custom configuration
+    volumes:
+      - /srv/pihole-docker/unbound:/opt/unbound/etc/unbound:rw
+
+    # Network configuration for VLAN 20
+    networks:
+      vlan20:
+        ipv4_address: 10.10.20.12
+
+    # Port mappings (DNS only)
+    ports:
+      - "53:53/tcp"    # DNS TCP
+      - "53:53/udp"    # DNS UDP
+
+    # Health check for service monitoring
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "google.com"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits for Radxa Zero 3E
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+# Custom networks
+networks:
+  # VLAN 20 network for Route Pi² services
+  vlan20:
+    driver: macvlan
+    driver_opts:
+      parent: vlan20  # VLAN interface created by systemd-networkd
+    ipam:
+      config:
+        - subnet: 10.10.0.0/18
+          gateway: 10.10.20.1
+          ip_range: 10.10.20.0/24
+
+# Named volumes for data persistence
+volumes:
+  pihole_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /srv/pihole-docker/pihole
+
+  unbound_config:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /srv/pihole-docker/unbound
