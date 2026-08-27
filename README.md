@@ -164,6 +164,13 @@ echo 'lxc.cap.drop =' >> /etc/pve/lxc/<CTID>.conf
 
 See [LXC/Proxmox Notes](docs/KEEPALIVED-HA.md#lxc--proxmox-notes) for details.
 
+### Proxmox Docker Node (VM or nested LXC)
+
+If Pi-hole is deployed in Docker on Proxmox, use:
+
+- [Proxmox Docker Pi-hole bootstrap guide](infrastructure/proxmox/docker-pihole-bootstrap.md)
+- [Proxmox Docker Compose example](examples/docker/docker-compose.pihole.proxmox.yaml)
+
 ## 🛠️ Troubleshooting
 
 ### VIP not appearing

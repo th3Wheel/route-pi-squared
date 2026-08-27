@@ -1,0 +1,41 @@
+version: '3.8'
+
+# Docker Compose manifest for Pi-hole on a Proxmox node (VM or nested LXC)
+# Uses host networking so DNS/DHCP can bind directly on the node interface.
+
+services:
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole-proxmox
+    hostname: pihole-proxmox
+    network_mode: host
+
+    environment:
+      TZ: "${TZ:-UTC}"
+      WEBPASSWORD: ${PIHOLE_WEBPASSWORD:?Required environment variable missing}
+      PIHOLE_DNS_: "${PIHOLE_UPSTREAM_DNS:-1.1.1.1;1.0.0.1}"
+      DNSSEC: "true"
+      DNS_FQDN_REQUIRED: "true"
+      DNS_BOGUS_PRIV: "true"
+      REV_SERVER: "true"
+      REV_SERVER_DOMAIN: "${REV_SERVER_DOMAIN:-lan}"
+      REV_SERVER_TARGET: "${REV_SERVER_TARGET:-10.10.20.1}"
+      REV_SERVER_CIDR: "${REV_SERVER_CIDR:-10.10.0.0/18}"
+      DHCP_ACTIVE: "${DHCP_ACTIVE:-false}"
+      FTLCONF_LOCAL_IPV4: "${LOCAL_IPV4:?Required local node IPv4 address}"
+
+    volumes:
+      - /srv/pihole-docker/pihole/etc-pihole:/etc/pihole:rw
+      - /srv/pihole-docker/pihole/etc-dnsmasq.d:/etc/dnsmasq.d:rw
+
+    cap_add:
+      - NET_ADMIN
+
+    healthcheck:
+      test: ["CMD-SHELL", "pihole status | grep -q 'DNS service is running'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    restart: unless-stopped
