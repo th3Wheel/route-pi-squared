@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # deploy_pihole_lxc.sh
 #
 # Purpose:
@@ -189,8 +189,12 @@ pct exec "$CTID" -- bash -c "
 "
 
 info "Setting Pi-hole web UI password..."
-# Use pihole -a -p to set password; pass via stdin to avoid it appearing in ps
-pct exec "$CTID" -- bash -c "printf '%s' '${WEBPASSWORD}' | pihole -a -p -"
+# Write the password to a temporary file inside the container so it is never
+# visible in ps output and single quotes in the password cannot break the
+# shell command string.
+TMPPASS="$(pct exec "$CTID" -- mktemp)"
+printf '%s' "${WEBPASSWORD}" | pct exec "$CTID" -- tee "${TMPPASS}" >/dev/null
+pct exec "$CTID" -- bash -c "pihole -a -p \"\$(cat '${TMPPASS}')\" && rm -f '${TMPPASS}'"
 
 # ── Verify Pi-hole is running ─────────────────────────────────────────────────
 info "Verifying Pi-hole FTL service..."
