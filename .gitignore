@@ -20,3 +20,8 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
+
+# Environment variable files — contain secrets; never commit
+.env
+.env.local
+.env.*.local

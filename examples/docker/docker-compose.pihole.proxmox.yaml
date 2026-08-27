@@ -1,0 +1,96 @@
+version: '3.8'
+
+# Docker Compose manifest for Pi-hole + Unbound stack on Proxmox VM or LXC
+# Deploys DNS ad-blocking with recursive resolver
+# Network mode: host (recommended for Proxmox — avoids NAT and simplifies VRRP/Keepalived)
+#
+# Prerequisites:
+#   - Docker and Docker Compose installed on the Proxmox guest
+#   - For LXC: nesting=1 and keyctl=1 features enabled (see infrastructure/proxmox/)
+#   - Copy .env.example to .env and fill in the required values
+#   - Create data directories: sudo mkdir -p /srv/pihole/{etc-pihole,etc-dnsmasq.d,var-log} /srv/unbound
+#
+# Usage:
+#   docker compose -f docker-compose.pihole.proxmox.yaml up -d
+
+services:
+  # Pi-hole DNS ad-blocker service
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    hostname: ${PIHOLE_HOSTNAME:-pihole}
+
+    # Use host networking so Pi-hole binds directly to the VM/LXC IP.
+    # This allows Keepalived to move the VIP between containers without
+    # port-mapping conflicts and ensures DHCP broadcasts are received.
+    network_mode: host
+
+    # Environment configuration
+    environment:
+      TZ: ${TZ:-UTC}
+      WEBPASSWORD: ${PIHOLE_WEBPASSWORD:?Required: set PIHOLE_WEBPASSWORD in .env}
+      PIHOLE_DNS_: ${PIHOLE_DNS:-127.0.0.1#5335}  # Unbound local resolver
+      DNSSEC: 'true'
+      DNS_FQDN_REQUIRED: 'true'
+      DNS_BOGUS_PRIV: 'true'
+      # Reverse DNS — set to match your local LAN
+      REV_SERVER: ${REV_SERVER:-false}
+      REV_SERVER_DOMAIN: ${REV_SERVER_DOMAIN:-lan}
+      REV_SERVER_TARGET: ${REV_SERVER_TARGET:-192.168.1.1}
+      REV_SERVER_CIDR: ${REV_SERVER_CIDR:-192.168.1.0/24}
+      # DHCP — enable only on one node if using Pi-hole DHCP
+      DHCP_ACTIVE: ${DHCP_ACTIVE:-false}
+      # Bind only to the static IP of this node (not the VIP) to avoid
+      # conflicts when Keepalived moves the VIP to the backup node
+      WEB_BIND_ADDR: ${NODE_IP:?Required: set NODE_IP in .env}
+
+    # Volume mounts for data persistence
+    volumes:
+      - ${PIHOLE_DATA_DIR:-/srv/pihole}/etc-pihole:/etc/pihole:rw
+      - ${PIHOLE_DATA_DIR:-/srv/pihole}/etc-dnsmasq.d:/etc/dnsmasq.d:rw
+      - ${PIHOLE_DATA_DIR:-/srv/pihole}/var-log:/var/log:rw
+
+    # Capabilities required for DNS binding and DHCP
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+
+    # Health check for service monitoring
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "pi-hole.net"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Restart policy — keep running across reboots
+    restart: unless-stopped
+
+    # Depend on Unbound being healthy before Pi-hole starts
+    depends_on:
+      unbound:
+        condition: service_healthy
+
+  # Unbound recursive DNS resolver
+  # Listens on 127.0.0.1:5335 so only Pi-hole (on the same host) can reach it
+  unbound:
+    image: mvance/unbound:latest
+    container_name: unbound
+    hostname: ${UNBOUND_HOSTNAME:-unbound}
+
+    network_mode: host
+
+    # Volume mount for custom configuration
+    volumes:
+      - ${UNBOUND_DATA_DIR:-/srv/unbound}:/opt/unbound/etc/unbound:rw
+
+    # Health check for service monitoring
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "-p", "5335", "pi-hole.net"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Restart policy
+    restart: unless-stopped
