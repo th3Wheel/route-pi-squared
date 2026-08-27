@@ -2,6 +2,22 @@
 
 This directory contains example configuration files for Route: π².
 
+## docker/docker-compose.pihole.proxmox.yaml
+
+Example Docker Compose configuration for running Pi-hole on a Proxmox-hosted node
+(VM or nested LXC).
+
+**Installation:**
+```bash
+sudo cp docker/docker-compose.pihole.proxmox.yaml /srv/pihole-docker/docker-compose.yaml
+```
+
+**Important:** set environment variables before `docker compose up`:
+- `PIHOLE_WEBPASSWORD` - Required admin password
+- `LOCAL_IPV4` - Required node IP address for Pi-hole FTL
+- `PIHOLE_UPSTREAM_DNS` - Optional upstream DNS servers (default: `1.1.1.1;1.0.0.1`)
+- `DHCP_ACTIVE` - Optional DHCP enable flag (`false` by default)
+
 ## keepalived-master.conf
 
 Example Keepalived configuration for the master (primary) node.
