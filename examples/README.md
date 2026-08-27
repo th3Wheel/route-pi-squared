@@ -2,23 +2,55 @@
 
 This directory contains example configuration files for Route: π².
 
+## Proxmox VE 9 — native LXC deployment (recommended)
+
+Proxmox VE 9 supports hosting containers directly via LXC — no Docker required on the
+Proxmox host. Use the scripts in `infrastructure/proxmox/` to provision Pi-hole natively:
+
+```bash
+# 1. On the Proxmox VE host — create a reusable LXC template
+sudo infrastructure/proxmox/pihole-lxc-template.sh \
+  --ctid 9200 \
+  --hostname pihole-template \
+  --bridge vmbr1 \
+  --ip 10.20.20.250/24 \
+  --gateway 10.20.20.1
+
+# 2. Clone the template and install Pi-hole for the first node
+sudo infrastructure/proxmox/deploy_pihole_lxc.sh \
+  --ctid 200 \
+  --template-ctid 9200 \
+  --hostname pihole-1 \
+  --ip 10.20.20.11/24 \
+  --gateway 10.20.20.1 \
+  --webpassword <your-password>
+
+# 3. Repeat for the second node (different --ctid, --hostname, --ip)
+```
+
+Then configure Keepalived inside each container using the examples below.
+
+---
+
 ## docker/docker-compose.pihole.proxmox.yaml
 
-Docker Compose manifest for running Pi-hole + Unbound in Docker on a Proxmox VM or LXC
-container. Uses `network_mode: host` so Pi-hole binds directly to the node's static IP,
-which is required for Keepalived VRRP to move the VIP between nodes without port-mapping
-conflicts.
+Docker Compose manifest for running Pi-hole + Unbound in Docker on a **Proxmox VM guest**
+(not on the Proxmox host itself). Uses `network_mode: host` so Pi-hole binds directly to
+the VM's static IP, which is required for Keepalived VRRP to move the VIP between nodes
+without port-mapping conflicts.
+
+> **Note:** For bare-metal Proxmox deployments, prefer the native LXC approach above.
+> This Docker Compose file is intended for VM guests where Docker is already in use.
 
 **Prerequisites:**
-- Docker Engine and the Docker Compose plugin installed on the guest
-- For LXC: `nesting=1` and `keyctl=1` features enabled
-  (see `infrastructure/proxmox/pihole-lxc-template.sh`)
-- Static IP assigned to the guest (not using DHCP)
+- Docker Engine and the Docker Compose plugin installed on the VM guest
+- Static IP assigned to the VM guest (not using DHCP)
 
 **Quick start:**
 ```bash
 # 1. Copy the .env example and fill in your values
 cp examples/docker/.env.proxmox.example /opt/pihole-docker/.env
+# Note: .env is excluded by .gitignore — never commit it
 
 # 2. Edit /opt/pihole-docker/.env — set NODE_IP and PIHOLE_WEBPASSWORD at minimum
 
@@ -27,12 +59,11 @@ cd /opt/pihole-docker
 docker compose -f docker-compose.yaml up -d
 ```
 
-Or use the automated setup script (run on the Proxmox guest as root):
-```bash
-sudo infrastructure/proxmox/deploy_pihole_docker.sh \
-  --node-ip 10.20.20.11 \
-  --webpassword <your-password>
-```
+## docker/.env.proxmox.example
+
+Annotated template for environment variables used by `docker-compose.pihole.proxmox.yaml`.
+Copy to `.env` (in the same directory as the Compose file) and fill in your values.
+The `.env` file is excluded by `.gitignore` to prevent secrets from being committed.
 
 ## docker/docker-compose.pihole.yaml
 
