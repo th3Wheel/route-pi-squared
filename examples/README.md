@@ -2,6 +2,43 @@
 
 This directory contains example configuration files for Route: π².
 
+## docker/docker-compose.pihole.proxmox.yaml
+
+Docker Compose manifest for running Pi-hole + Unbound in Docker on a Proxmox VM or LXC
+container. Uses `network_mode: host` so Pi-hole binds directly to the node's static IP,
+which is required for Keepalived VRRP to move the VIP between nodes without port-mapping
+conflicts.
+
+**Prerequisites:**
+- Docker Engine and the Docker Compose plugin installed on the guest
+- For LXC: `nesting=1` and `keyctl=1` features enabled
+  (see `infrastructure/proxmox/pihole-lxc-template.sh`)
+- Static IP assigned to the guest (not using DHCP)
+
+**Quick start:**
+```bash
+# 1. Copy the .env example and fill in your values
+cp examples/docker/.env.proxmox.example /opt/pihole-docker/.env
+
+# 2. Edit /opt/pihole-docker/.env — set NODE_IP and PIHOLE_WEBPASSWORD at minimum
+
+# 3. Start the stack
+cd /opt/pihole-docker
+docker compose -f docker-compose.yaml up -d
+```
+
+Or use the automated setup script (run on the Proxmox guest as root):
+```bash
+sudo infrastructure/proxmox/deploy_pihole_docker.sh \
+  --node-ip 10.20.20.11 \
+  --webpassword <your-password>
+```
+
+## docker/docker-compose.pihole.yaml
+
+Docker Compose manifest for Pi-hole + Unbound on a Radxa Zero 3E (uses macvlan networking
+on VLAN 20). See comments inside the file for network configuration details.
+
 ## keepalived-master.conf
 
 Example Keepalived configuration for the master (primary) node.
